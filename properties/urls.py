@@ -6,13 +6,7 @@ router = DefaultRouter()
 router.register(r'properties-viewset', views.PropertyViewSet, basename='property')
 
 urlpatterns = [
-    # Cache management endpoints
+    path('properties/', views.property_list, name='property-list'),
     path('cache-info/', views.cache_info, name='cache-info'),
     path('clear-cache/', views.clear_cache, name='clear-cache'),
-    
-    # Include router URLs
-    path('', include(router.urls)),
-
-    # Traditional Django view 
-    path('properties-json/', views.property_list, name='property-list-json'),
 ]

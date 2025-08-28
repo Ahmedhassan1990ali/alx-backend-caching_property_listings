@@ -1,63 +1,49 @@
 from django.shortcuts import render
 from django.core.cache import cache
 from django.views.decorators.cache import cache_page
-from django.utils.decorators import method_decorator
-from rest_framework import viewsets, status
 from django.http import JsonResponse
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
+from .utils import get_all_properties
 from .models import Property
-from .serializers import PropertySerializer
 import time
 
 # Create your views here.
-# Class-based view with cache 
-class PropertyViewSet(viewsets.ModelViewSet):
-    queryset = Property.objects.all()
-    serializer_class = PropertySerializer
-    
-    @method_decorator(cache_page(60 * 15))
-    def list(self, request, *args, **kwargs):
-        return super().list(request, *args, **kwargs)
-
-# Utility view to check cache status
-@api_view(['GET'])
-def cache_info(request):
-    """
-    View to check cache status and statistics
-    """
-    cache_stats = cache._cache.get_client().info()
-    cache_keys = cache._cache.get_client().keys('*')
-    
-    return Response({
-        'cache_stats': cache_stats,
-        'cache_keys': [key.decode('utf-8') for key in cache_keys],
-        'cache_ttl': '15 minutes for property listings'
-    })
-
-# View to clear cache
-@api_view(['POST'])
-def clear_cache(request):
-    """
-    View to clear the entire cache
-    """
-    cache.clear()
-    return Response({'message': 'Cache cleared successfully'})
-
 # Traditional Django view without DRF
 @cache_page(60 * 15)
 def property_list(request):
     """
-    Traditional Django view returning JsonResponse
+    View to list all properties using low-level cached queryset
     """
-    properties = Property.objects.all().values('id', 'title', 'description', 'price', 'location', 'created_at')
-    data = {
-        'properties': list(properties),
-        'count': len(properties),
-        'timestamp': time.time()
-    }
+    # Use the utility function to get properties (cached for 1 hour)
+    properties = get_all_properties()
+    
+    # Convert queryset to list of dictionaries for JSON response
+    properties_data = list(properties.values('id', 'title', 'description', 'price', 'location', 'created_at'))
+
     return JsonResponse({
-        'properties': list(properties),
-        'count': len(properties),
+        'properties': properties_data,
+        'count': len(properties_data),
+        'cache_info': 'View response cached for 15 minutes, queryset cached for 1 hour',
         'timestamp': time.time()
     })
+
+def cache_info(request):
+    """
+    View to show cache information
+    """
+    # Check if all_properties key exists in cache
+    has_cached_properties = cache.has_key('all_properties')
+    cache_ttl = cache.ttl('all_properties') if has_cached_properties else None
+    
+    return JsonResponse({
+        'all_properties_cached': has_cached_properties,
+        'cache_ttl_seconds': cache_ttl,
+        'cache_ttl_minutes': cache_ttl / 60 if cache_ttl else None,
+        'message': 'Queryset is cached for 1 hour (3600 seconds)'
+    })
+
+def clear_cache(request):
+    """
+    View to clear the cache
+    """
+    cache.delete('all_properties')
+    return JsonResponse({'message': 'Cache cleared successfully'})
