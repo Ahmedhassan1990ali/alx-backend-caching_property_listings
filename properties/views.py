@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.core.cache import cache
 from django.views.decorators.cache import cache_page
 from django.http import JsonResponse
-from .utils import get_all_properties
+from .utils import get_all_properties, get_redis_cache_metrics
 from .models import Property
 import time
 
@@ -47,3 +47,10 @@ def clear_cache(request):
     """
     cache.delete('all_properties')
     return JsonResponse({'message': 'Cache cleared successfully'})
+
+def cache_metrics(request):
+    """
+    View to display Redis cache metrics
+    """
+    metrics = get_redis_cache_metrics()
+    return JsonResponse(metrics)

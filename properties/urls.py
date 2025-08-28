@@ -9,4 +9,5 @@ urlpatterns = [
     path('properties/', views.property_list, name='property-list'),
     path('cache-info/', views.cache_info, name='cache-info'),
     path('clear-cache/', views.clear_cache, name='clear-cache'),
+    path('cache-metrics/', views.cache_metrics, name='cache-metrics'),
 ]
